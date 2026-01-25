@@ -26,6 +26,15 @@ class ListCatalogItemsParams(BaseModel):
     active: bool = Field(True, description="Whether to only return active catalog items")
 
 
+class ListCatalogsParams(BaseModel):
+    """Parameters for listing service catalogs."""
+
+    limit: int = Field(10, description="Maximum number of catalogs to return")
+    offset: int = Field(0, description="Offset for pagination")
+    query: Optional[str] = Field(None, description="Search query for catalogs (name/description)")
+    active: bool = Field(True, description="Whether to only return active catalogs")
+
+
 class GetCatalogItemParams(BaseModel):
     """Parameters for getting a specific service catalog item."""
     
@@ -74,9 +83,22 @@ class UpdateCatalogCategoryParams(BaseModel):
 
 class MoveCatalogItemsParams(BaseModel):
     """Parameters for moving catalog items between categories."""
-    
+
     item_ids: List[str] = Field(..., description="List of catalog item IDs to move")
     target_category_id: str = Field(..., description="Target category ID to move items to")
+
+
+class CreateCatalogItemParams(BaseModel):
+    """Parameters for creating a catalog item."""
+
+    name: str = Field(..., description="Name of the catalog item")
+    short_description: str = Field(..., description="Short description of the item")
+    description: str = Field("", description="Long description of the item")
+    category: Optional[str] = Field(None, description="Category sys_id")
+    price: Optional[str] = Field(None, description="Price")
+    active: bool = Field(True, description="Whether the item is active")
+    approval: Optional[str] = Field(None, description="Approval policy")
+    delivery_plan: Optional[str] = Field(None, description="Delivery plan sys_id")
 
 
 def list_catalog_items(
@@ -154,6 +176,56 @@ def list_catalog_items(
             "limit": params.limit,
             "offset": params.offset,
         }
+
+
+def create_catalog_item(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: CreateCatalogItemParams,
+) -> CatalogResponse:
+    """Create a catalog item."""
+
+    url = f"{config.instance_url}/api/now/table/sc_cat_item"
+
+    data = {
+        "name": params.name,
+        "short_description": params.short_description,
+        "description": params.description,
+        "active": str(params.active).lower(),
+    }
+    if params.category:
+        data["category"] = params.category
+    if params.price is not None:
+        data["price"] = params.price
+    if params.approval:
+        data["approval"] = params.approval
+    if params.delivery_plan:
+        data["delivery_plan"] = params.delivery_plan
+
+    headers = auth_manager.get_headers()
+    headers["Accept"] = "application/json"
+
+    try:
+        response = requests.post(
+            url,
+            json=data,
+            headers=headers,
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        result = response.json().get("result", {})
+        return CatalogResponse(
+            success=True,
+            message="Catalog item created successfully",
+            data=result,
+        )
+    except requests.RequestException as e:
+        logger.error(f"Error creating catalog item: {e}")
+        return CatalogResponse(
+            success=False,
+            message=f"Error creating catalog item: {str(e)}",
+            data=None,
+        )
     
     except requests.exceptions.RequestException as e:
         logger.error(f"Error listing catalog items: {str(e)}")
@@ -161,6 +233,83 @@ def list_catalog_items(
             "success": False,
             "message": f"Error listing catalog items: {str(e)}",
             "items": [],
+            "total": 0,
+            "limit": params.limit,
+            "offset": params.offset,
+        }
+
+
+def list_catalogs(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: ListCatalogsParams,
+) -> Dict[str, Any]:
+    """
+    List service catalogs (sc_catalog table).
+
+    Args:
+        config: Server configuration
+        auth_manager: Authentication manager
+        params: Parameters for listing catalogs
+
+    Returns:
+        Dictionary containing catalogs and metadata
+    """
+    logger.info("Listing service catalogs")
+
+    url = f"{config.instance_url}/api/now/table/sc_catalog"
+
+    query_params = {
+        "sysparm_limit": params.limit,
+        "sysparm_offset": params.offset,
+        "sysparm_display_value": "true",
+        "sysparm_exclude_reference_link": "true",
+        "sysparm_fields": "sys_id,title,description,homepage,active,sys_updated_on",
+    }
+
+    filters = []
+    if params.active:
+        filters.append("active=true")
+    if params.query:
+        filters.append(f"titleLIKE{params.query}^ORdescriptionLIKE{params.query}")
+
+    if filters:
+        query_params["sysparm_query"] = "^".join(filters)
+
+    headers = auth_manager.get_headers()
+    headers["Accept"] = "application/json"
+
+    try:
+        response = requests.get(url, headers=headers, params=query_params, timeout=config.timeout)
+        response.raise_for_status()
+        result = response.json().get("result", [])
+        catalogs = [
+            {
+                "sys_id": item.get("sys_id", ""),
+                "title": item.get("title", ""),
+                "description": item.get("description", ""),
+                "homepage": item.get("homepage", ""),
+                "active": item.get("active", ""),
+                "updated_on": item.get("sys_updated_on", ""),
+            }
+            for item in result
+        ]
+
+        return {
+            "success": True,
+            "message": f"Retrieved {len(catalogs)} catalogs",
+            "catalogs": catalogs,
+            "total": len(catalogs),
+            "limit": params.limit,
+            "offset": params.offset,
+        }
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error listing catalogs: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error listing catalogs: {str(e)}",
+            "catalogs": [],
             "total": 0,
             "limit": params.limit,
             "offset": params.offset,

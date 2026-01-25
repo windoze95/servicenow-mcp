@@ -78,6 +78,21 @@ class UpdateCatalogItemVariableParams(BaseModel):
     max: Optional[int] = Field(None, description="Maximum value for numeric fields")
 
 
+class DeleteCatalogItemVariableParams(BaseModel):
+    """Parameters for deleting a catalog item variable."""
+
+    variable_id: str = Field(..., description="The sys_id of the variable to delete")
+
+
+class CreateCatalogVariableChoiceParams(BaseModel):
+    """Parameters for creating a choice for a catalog item variable."""
+
+    variable_id: str = Field(..., description="The sys_id of the catalog item variable")
+    value: str = Field(..., description="The value stored for the choice")
+    label: str = Field(..., description="Display label for the choice")
+    order: Optional[int] = Field(None, description="Display order of the choice")
+
+
 def create_catalog_item_variable(
     config: ServerConfig,
     auth_manager: AuthManager,
@@ -286,4 +301,78 @@ def update_catalog_item_variable(
         return CatalogItemVariableResponse(
             success=False,
             message=f"Failed to update catalog item variable: {str(e)}",
-        ) 
+        )
+
+
+def delete_catalog_item_variable(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: DeleteCatalogItemVariableParams,
+) -> CatalogItemVariableResponse:
+    """Delete a catalog item variable."""
+
+    api_url = f"{config.instance_url}/api/now/table/item_option_new/{params.variable_id}"
+
+    try:
+        response = requests.delete(
+            api_url,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+
+
+def create_catalog_variable_choice(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: CreateCatalogVariableChoiceParams,
+) -> CatalogItemVariableResponse:
+    """Create a choice for a catalog item variable."""
+
+    api_url = f"{config.instance_url}/api/now/table/item_option_new_choice"
+
+    data = {
+        "question": params.variable_id,
+        "value": params.value,
+        "text": params.label,
+    }
+    if params.order is not None:
+        data["order"] = params.order
+
+    try:
+        response = requests.post(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        result = response.json().get("result", {})
+        return CatalogItemVariableResponse(
+            success=True,
+            message="Catalog variable choice created successfully",
+            variable_id=params.variable_id,
+            details=result,
+        )
+    except requests.RequestException as e:
+        logger.error(f"Failed to create catalog variable choice: {e}")
+        return CatalogItemVariableResponse(
+            success=False,
+            message=f"Failed to create catalog variable choice: {str(e)}",
+            variable_id=params.variable_id,
+        )
+        if response.status_code not in (200, 204):
+            response.raise_for_status()
+
+        return CatalogItemVariableResponse(
+            success=True,
+            message="Catalog item variable deleted successfully",
+            variable_id=params.variable_id,
+        )
+
+    except requests.RequestException as e:
+        logger.error(f"Failed to delete catalog item variable: {e}")
+        return CatalogItemVariableResponse(
+            success=False,
+            message=f"Failed to delete catalog item variable: {str(e)}",
+            variable_id=params.variable_id,
+        )

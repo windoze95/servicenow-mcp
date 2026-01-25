@@ -14,42 +14,32 @@ from servicenow_mcp.tools.catalog_optimization import (
 )
 from servicenow_mcp.tools.catalog_tools import (
     CreateCatalogCategoryParams,
+    CreateCatalogItemParams,
     GetCatalogItemParams,
+    ListCatalogsParams,
     ListCatalogCategoriesParams,
     ListCatalogItemsParams,
     MoveCatalogItemsParams,
     UpdateCatalogCategoryParams,
-)
-from servicenow_mcp.tools.catalog_tools import (
     create_catalog_category as create_catalog_category_tool,
-)
-from servicenow_mcp.tools.catalog_tools import (
+    create_catalog_item as create_catalog_item_tool,
     get_catalog_item as get_catalog_item_tool,
-)
-from servicenow_mcp.tools.catalog_tools import (
     list_catalog_categories as list_catalog_categories_tool,
-)
-from servicenow_mcp.tools.catalog_tools import (
     list_catalog_items as list_catalog_items_tool,
-)
-from servicenow_mcp.tools.catalog_tools import (
+    list_catalogs as list_catalogs_tool,
     move_catalog_items as move_catalog_items_tool,
-)
-from servicenow_mcp.tools.catalog_tools import (
     update_catalog_category as update_catalog_category_tool,
 )
 from servicenow_mcp.tools.catalog_variables import (
     CreateCatalogItemVariableParams,
+    CreateCatalogVariableChoiceParams,
+    DeleteCatalogItemVariableParams,
     ListCatalogItemVariablesParams,
     UpdateCatalogItemVariableParams,
-)
-from servicenow_mcp.tools.catalog_variables import (
     create_catalog_item_variable as create_catalog_item_variable_tool,
-)
-from servicenow_mcp.tools.catalog_variables import (
+    create_catalog_variable_choice as create_catalog_variable_choice_tool,
+    delete_catalog_item_variable as delete_catalog_item_variable_tool,
     list_catalog_item_variables as list_catalog_item_variables_tool,
-)
-from servicenow_mcp.tools.catalog_variables import (
     update_catalog_item_variable as update_catalog_item_variable_tool,
 )
 from servicenow_mcp.tools.change_tools import (
@@ -183,6 +173,7 @@ from servicenow_mcp.tools.knowledge_base import (
 from servicenow_mcp.tools.script_include_tools import (
     CreateScriptIncludeParams,
     DeleteScriptIncludeParams,
+    ExecuteScriptIncludeParams,
     GetScriptIncludeParams,
     ListScriptIncludesParams,
     ScriptIncludeResponse,
@@ -192,6 +183,7 @@ from servicenow_mcp.tools.script_include_tools import (
     create_script_include as create_script_include_tool,
 )
 from servicenow_mcp.tools.script_include_tools import (
+    execute_script_include as execute_script_include_tool,
     delete_script_include as delete_script_include_tool,
 )
 from servicenow_mcp.tools.script_include_tools import (
@@ -254,42 +246,36 @@ from servicenow_mcp.tools.workflow_tools import (
     ReorderWorkflowActivitiesParams,
     UpdateWorkflowActivityParams,
     UpdateWorkflowParams,
-)
-from servicenow_mcp.tools.workflow_tools import (
     activate_workflow as activate_workflow_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     add_workflow_activity as add_workflow_activity_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     create_workflow as create_workflow_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     deactivate_workflow as deactivate_workflow_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     delete_workflow_activity as delete_workflow_activity_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     get_workflow_activities as get_workflow_activities_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     get_workflow_details as get_workflow_details_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     list_workflow_versions as list_workflow_versions_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     list_workflows as list_workflows_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     reorder_workflow_activities as reorder_workflow_activities_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     update_workflow as update_workflow_tool,
-)
-from servicenow_mcp.tools.workflow_tools import (
     update_workflow_activity as update_workflow_activity_tool,
+)
+from servicenow_mcp.tools.syslog_tools import (
+    ListSyslogEntriesParams,
+    GetSyslogEntryParams,
+    list_syslog_entries as list_syslog_entries_tool,
+    get_syslog_entry as get_syslog_entry_tool,
+)
+from servicenow_mcp.tools.ui_policy_tools import (
+    CreateUiPolicyParams,
+    CreateUiPolicyActionParams,
+    create_ui_policy as create_ui_policy_tool,
+    create_ui_policy_action as create_ui_policy_action_tool,
+)
+from servicenow_mcp.tools.user_criteria_tools import (
+    CreateUserCriteriaParams,
+    CreateUserCriteriaConditionParams,
+    create_user_criteria as create_user_criteria_tool,
+    create_user_criteria_condition as create_user_criteria_condition_tool,
 )
 from servicenow_mcp.tools.story_tools import (
     CreateStoryParams,
@@ -415,6 +401,13 @@ def get_tool_definitions(
             "List service catalog items.",
             "json",  # Tool returns list/dict
         ),
+        "list_catalogs": (
+            list_catalogs_tool,
+            ListCatalogsParams,
+            str,
+            "List service catalogs.",
+            "json",
+        ),
         "get_catalog_item": (
             get_catalog_item_tool,
             GetCatalogItemParams,
@@ -464,6 +457,13 @@ def get_tool_definitions(
             "Update a service catalog item.",
             "json",  # Tool returns Pydantic model
         ),
+        "create_catalog_item": (
+            create_catalog_item_tool,
+            CreateCatalogItemParams,
+            str,
+            "Create a new service catalog item.",
+            "json",
+        ),
         # Catalog Variables
         "create_catalog_item_variable": (
             create_catalog_item_variable_tool,
@@ -471,6 +471,13 @@ def get_tool_definitions(
             Dict[str, Any],  # Expects dict
             "Create a new catalog item variable",
             "dict",  # Tool returns Pydantic model
+        ),
+        "create_catalog_variable_choice": (
+            create_catalog_variable_choice_tool,
+            CreateCatalogVariableChoiceParams,
+            Dict[str, Any],
+            "Create a choice for a catalog item variable",
+            "dict",
         ),
         "list_catalog_item_variables": (
             list_catalog_item_variables_tool,
@@ -485,6 +492,13 @@ def get_tool_definitions(
             Dict[str, Any],  # Expects dict
             "Update a catalog item variable",
             "dict",  # Tool returns Pydantic model
+        ),
+        "delete_catalog_item_variable": (
+            delete_catalog_item_variable_tool,
+            DeleteCatalogItemVariableParams,
+            Dict[str, Any],
+            "Delete a catalog item variable",
+            "dict",
         ),
         # Change Management Tools
         "create_change_request": (
@@ -714,6 +728,13 @@ def get_tool_definitions(
             "Delete a script include in ServiceNow",
             "json_dict",  # Tool returns Pydantic model
         ),
+        "execute_script_include": (
+            execute_script_include_tool,
+            ExecuteScriptIncludeParams,
+            Dict[str, Any],
+            "Execute a script include method via the Script Execution API",
+            "raw_dict",
+        ),
         # Knowledge Base Tools
         "create_knowledge_base": (
             create_knowledge_base_tool,
@@ -842,6 +863,50 @@ def get_tool_definitions(
             ListGroupsParams,
             Dict[str, Any],  # Expects dict
             "List groups from ServiceNow with optional filtering",
+            "raw_dict",
+        ),
+        # UI Policy Tools
+        "create_ui_policy": (
+            create_ui_policy_tool,
+            CreateUiPolicyParams,
+            Dict[str, Any],
+            "Create a UI policy",
+            "raw_dict",
+        ),
+        "create_ui_policy_action": (
+            create_ui_policy_action_tool,
+            CreateUiPolicyActionParams,
+            Dict[str, Any],
+            "Create a UI policy action",
+            "raw_dict",
+        ),
+        # User Criteria Tools
+        "create_user_criteria": (
+            create_user_criteria_tool,
+            CreateUserCriteriaParams,
+            Dict[str, Any],
+            "Create user criteria",
+            "raw_dict",
+        ),
+        "create_user_criteria_condition": (
+            create_user_criteria_condition_tool,
+            CreateUserCriteriaConditionParams,
+            Dict[str, Any],
+            "Create a condition for user criteria",
+            "raw_dict",
+        ),
+        "list_syslog_entries": (
+            list_syslog_entries_tool,
+            ListSyslogEntriesParams,
+            Dict[str, Any],
+            "List system log entries",
+            "raw_dict",
+        ),
+        "get_syslog_entry": (
+            get_syslog_entry_tool,
+            GetSyslogEntryParams,
+            Dict[str, Any],
+            "Get a specific system log entry",
             "raw_dict",
         ),
         # Story Management Tools
