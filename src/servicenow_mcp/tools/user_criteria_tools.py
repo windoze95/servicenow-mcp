@@ -20,9 +20,9 @@ class CreateUserCriteriaParams(BaseModel):
     name: str = Field(..., description="Name of the user criteria")
     active: bool = Field(True, description="Whether the criteria is active")
     description: Optional[str] = Field(None, description="Description")
-    role: Optional[str] = Field(None, description="Role sys_id to include")
-    group: Optional[str] = Field(None, description="Group sys_id to include")
-    user: Optional[str] = Field(None, description="User sys_id to include")
+    role: Optional[str] = Field(None, description="Role sys_id(s) to include")
+    group: Optional[str] = Field(None, description="Group sys_id(s) to include")
+    user: Optional[str] = Field(None, description="User sys_id(s) to include")
 
 
 class CreateUserCriteriaConditionParams(BaseModel):
@@ -49,11 +49,11 @@ def create_user_criteria(
     if params.description:
         data["description"] = params.description
     if params.role:
-        data["role"] = params.role
+        data["roles"] = params.role
     if params.group:
-        data["group"] = params.group
+        data["groups"] = params.group
     if params.user:
-        data["user"] = params.user
+        data["users"] = params.user
 
     try:
         response = requests.post(
