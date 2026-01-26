@@ -176,6 +176,16 @@ def list_catalog_items(
             "limit": params.limit,
             "offset": params.offset,
         }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error listing catalog items: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error listing catalog items: {str(e)}",
+            "items": [],
+            "total": 0,
+            "limit": params.limit,
+            "offset": params.offset,
+        }
 
 
 def create_catalog_item(
@@ -226,17 +236,6 @@ def create_catalog_item(
             message=f"Error creating catalog item: {str(e)}",
             data=None,
         )
-    
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error listing catalog items: {str(e)}")
-        return {
-            "success": False,
-            "message": f"Error listing catalog items: {str(e)}",
-            "items": [],
-            "total": 0,
-            "limit": params.limit,
-            "offset": params.offset,
-        }
 
 
 def list_catalogs(

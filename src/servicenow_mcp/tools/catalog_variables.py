@@ -319,6 +319,21 @@ def delete_catalog_item_variable(
             headers=auth_manager.get_headers(),
             timeout=config.timeout,
         )
+        if response.status_code not in (200, 204):
+            response.raise_for_status()
+
+        return CatalogItemVariableResponse(
+            success=True,
+            message="Catalog item variable deleted successfully",
+            variable_id=params.variable_id,
+        )
+    except requests.RequestException as e:
+        logger.error(f"Failed to delete catalog item variable: {e}")
+        return CatalogItemVariableResponse(
+            success=False,
+            message=f"Failed to delete catalog item variable: {str(e)}",
+            variable_id=params.variable_id,
+        )
 
 
 def create_catalog_variable_choice(
@@ -358,21 +373,5 @@ def create_catalog_variable_choice(
         return CatalogItemVariableResponse(
             success=False,
             message=f"Failed to create catalog variable choice: {str(e)}",
-            variable_id=params.variable_id,
-        )
-        if response.status_code not in (200, 204):
-            response.raise_for_status()
-
-        return CatalogItemVariableResponse(
-            success=True,
-            message="Catalog item variable deleted successfully",
-            variable_id=params.variable_id,
-        )
-
-    except requests.RequestException as e:
-        logger.error(f"Failed to delete catalog item variable: {e}")
-        return CatalogItemVariableResponse(
-            success=False,
-            message=f"Failed to delete catalog item variable: {str(e)}",
             variable_id=params.variable_id,
         )
