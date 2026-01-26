@@ -2,7 +2,13 @@ name: Build and publish Docker image
 
 on:
   push:
+    branches:
+      - dev
+      - prod
   pull_request:
+    branches:
+      - dev
+      - prod
   workflow_dispatch:
 
 permissions:
@@ -27,23 +33,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set tag flavor based on branch
+        id: tags
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/prod" ]]; then
+            TAGS=$'type=raw,value=latest\ntype=sha\ntype=ref,event=branch'
+          else
+            TAGS=$'type=raw,value=dev\ntype=sha\ntype=ref,event=branch'
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=sha
-            type=ref,event=branch
-            type=ref,event=tag
-            type=raw,value=latest,enable={{is_default_branch}}
+          tags: ${{ steps.tags.outputs.tags }}
 
       - name: Build and (optionally) push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
