@@ -8,17 +8,36 @@ from servicenow_mcp.tools.catalog_optimization import (
     update_catalog_item,
 )
 from servicenow_mcp.tools.catalog_tools import (
+    list_catalogs,
     create_catalog_category,
     get_catalog_item,
     list_catalog_categories,
     list_catalog_items,
+    create_catalog_item,
     move_catalog_items,
     update_catalog_category,
 )
 from servicenow_mcp.tools.catalog_variables import (
+    delete_catalog_item_variable,
+    create_catalog_variable_choice,
     create_catalog_item_variable,
     list_catalog_item_variables,
     update_catalog_item_variable,
+)
+from servicenow_mcp.tools.ui_policy_tools import (
+    create_ui_policy,
+    create_ui_policy_action,
+)
+from servicenow_mcp.tools.user_criteria_tools import (
+    create_user_criteria,
+    create_user_criteria_condition,
+)
+from servicenow_mcp.tools.script_include_tools import (
+    execute_script_include,
+)
+from servicenow_mcp.tools.syslog_tools import (
+    list_syslog_entries,
+    get_syslog_entry,
 )
 from servicenow_mcp.tools.change_tools import (
     add_change_task,
@@ -126,17 +145,21 @@ __all__ = [
     "get_incident_by_number",
     
     # Catalog tools
+    "list_catalogs",
     "list_catalog_items",
     "get_catalog_item",
     "list_catalog_categories",
     "create_catalog_category",
     "update_catalog_category",
     "move_catalog_items",
+    "create_catalog_item",
     "get_optimization_recommendations",
     "update_catalog_item",
     "create_catalog_item_variable",
     "list_catalog_item_variables",
     "update_catalog_item_variable",
+    "delete_catalog_item_variable",
+    "create_catalog_variable_choice",
     
     # Change management tools
     "create_change_request",
@@ -170,14 +193,19 @@ __all__ = [
     "commit_changeset",
     "publish_changeset",
     "add_file_to_changeset",
-    
+
     # Script Include tools
     "list_script_includes",
     "get_script_include",
     "create_script_include",
     "update_script_include",
     "delete_script_include",
-    
+    "execute_script_include",
+
+    # Syslog tools
+    "list_syslog_entries",
+    "get_syslog_entry",
+
     # Knowledge Base tools
     "create_knowledge_base",
     "list_knowledge_bases",
@@ -199,6 +227,13 @@ __all__ = [
     "add_group_members",
     "remove_group_members",
     "list_groups",
+    # User criteria tools
+    "create_user_criteria",
+    "create_user_criteria_condition",
+
+    # UI Policy tools
+    "create_ui_policy",
+    "create_ui_policy_action",
 
     # Story tools
     "create_story",

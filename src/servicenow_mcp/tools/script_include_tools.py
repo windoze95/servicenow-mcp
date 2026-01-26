@@ -62,6 +62,22 @@ class DeleteScriptIncludeParams(BaseModel):
     script_include_id: str = Field(..., description="Script include ID or name")
 
 
+class ExecuteScriptIncludeParams(BaseModel):
+    """Parameters for executing a script include through a custom Script Execution API."""
+
+    script_include_name: str = Field(..., description="Name of the script include to execute")
+    method_name: str = Field(..., description="Method to invoke on the script include")
+    payload: Optional[Dict[str, Any]] = Field(None, description="Payload/arguments for the method")
+
+
+class ExecuteScriptIncludeParams(BaseModel):
+    """Parameters for executing a script include through a custom Script Execution API."""
+
+    script_include_name: str = Field(..., description="Name of the script include to execute")
+    method_name: str = Field(..., description="Method to invoke on the script include")
+    payload: Optional[Dict[str, Any]] = Field(None, description="Payload/arguments for the method")
+
+
 class ScriptIncludeResponse(BaseModel):
     """Response from script include operations."""
     
@@ -484,4 +500,53 @@ def delete_script_include(
         return ScriptIncludeResponse(
             success=False,
             message=f"Error deleting script include: {str(e)}",
-        ) 
+        )
+
+
+def execute_script_include(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: ExecuteScriptIncludeParams,
+) -> Dict[str, Any]:
+    """
+    Execute a script include method via the Script Execution API.
+
+    Note: This relies on a custom Script Execution API configured in ServiceNow.
+    The API resource path should be provided via ServerConfig.script_execution_api_resource_path.
+    """
+
+    resource_path = config.script_execution_api_resource_path
+    if not resource_path:
+        return {
+            "success": False,
+            "message": "SCRIPT_EXECUTION_API_RESOURCE_PATH is not configured; cannot execute script include.",
+        }
+
+    url = f"{config.instance_url}{resource_path}".rstrip("/")
+
+    payload = {
+        "script_include": params.script_include_name,
+        "method": params.method_name,
+        "payload": params.payload or {},
+    }
+
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        result = response.json().get("result", {})
+        return {
+            "success": True,
+            "message": "Script include executed successfully",
+            "result": result,
+        }
+    except requests.RequestException as e:
+        logger.error(f"Failed to execute script include: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to execute script include: {str(e)}",
+        }

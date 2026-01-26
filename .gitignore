@@ -173,6 +173,7 @@ cython_debug/
 # IDE files
 .idea/
 .vscode/
+.DS_Store
 *.swp
 *.swo
 
