@@ -20,9 +20,24 @@ class CreateUserCriteriaParams(BaseModel):
     name: str = Field(..., description="Name of the user criteria")
     active: bool = Field(True, description="Whether the criteria is active")
     description: Optional[str] = Field(None, description="Description")
-    role: Optional[str] = Field(None, description="Role sys_id(s) to include")
-    group: Optional[str] = Field(None, description="Group sys_id(s) to include")
-    user: Optional[str] = Field(None, description="User sys_id(s) to include")
+    roles: Optional[str] = Field(
+        None,
+        description="Role sys_id(s) to include",
+        alias="role",
+    )
+    groups: Optional[str] = Field(
+        None,
+        description="Group sys_id(s) to include",
+        alias="group",
+    )
+    users: Optional[str] = Field(
+        None,
+        description="User sys_id(s) to include",
+        alias="user",
+    )
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 class CreateUserCriteriaConditionParams(BaseModel):
@@ -48,12 +63,12 @@ def create_user_criteria(
     }
     if params.description:
         data["description"] = params.description
-    if params.role:
-        data["roles"] = params.role
-    if params.group:
-        data["groups"] = params.group
-    if params.user:
-        data["users"] = params.user
+    if params.roles:
+        data["roles"] = params.roles
+    if params.groups:
+        data["groups"] = params.groups
+    if params.users:
+        data["users"] = params.users
 
     try:
         response = requests.post(
