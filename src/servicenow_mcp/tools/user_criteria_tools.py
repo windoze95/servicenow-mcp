@@ -6,7 +6,7 @@ import logging
 from typing import Any, Dict, Optional
 
 import requests
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from servicenow_mcp.auth.auth_manager import AuthManager
 from servicenow_mcp.utils.config import ServerConfig
@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 class CreateUserCriteriaParams(BaseModel):
     """Parameters for creating user criteria."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     name: str = Field(..., description="Name of the user criteria")
     active: bool = Field(True, description="Whether the criteria is active")
@@ -35,9 +37,6 @@ class CreateUserCriteriaParams(BaseModel):
         description="User sys_id(s) to include",
         alias="user",
     )
-
-    class Config:
-        allow_population_by_field_name = True
 
 
 class CreateUserCriteriaConditionParams(BaseModel):
