@@ -131,14 +131,27 @@ def list_catalog_items(
     }
     
     # Add filters
-    filters = []
+    base_filters = []
     if params.active:
-        filters.append("active=true")
+        base_filters.append("active=true")
     if params.category:
-        filters.append(f"category={params.category}")
+        base_filters.append(f"category={params.category}")
+
+    filters = []
     if params.query:
-        filters.append(f"short_descriptionLIKE{params.query}^ORnameLIKE{params.query}")
-    
+        query_clauses = [
+            f"short_descriptionLIKE{params.query}",
+            f"nameLIKE{params.query}",
+        ]
+        if base_filters:
+            left = "^".join(base_filters + [query_clauses[0]])
+            right = "^".join(base_filters + [query_clauses[1]])
+            filters.append(f"{left}^OR{right}")
+        else:
+            filters.append(f"{query_clauses[0]}^OR{query_clauses[1]}")
+    else:
+        filters.extend(base_filters)
+
     if filters:
         query_params["sysparm_query"] = "^".join(filters)
     
@@ -266,11 +279,24 @@ def list_catalogs(
         "sysparm_fields": "sys_id,title,description,homepage,active,sys_updated_on",
     }
 
-    filters = []
+    base_filters = []
     if params.active:
-        filters.append("active=true")
+        base_filters.append("active=true")
+
+    filters = []
     if params.query:
-        filters.append(f"titleLIKE{params.query}^ORdescriptionLIKE{params.query}")
+        query_clauses = [
+            f"titleLIKE{params.query}",
+            f"descriptionLIKE{params.query}",
+        ]
+        if base_filters:
+            left = "^".join(base_filters + [query_clauses[0]])
+            right = "^".join(base_filters + [query_clauses[1]])
+            filters.append(f"{left}^OR{right}")
+        else:
+            filters.append(f"{query_clauses[0]}^OR{query_clauses[1]}")
+    else:
+        filters.extend(base_filters)
 
     if filters:
         query_params["sysparm_query"] = "^".join(filters)
@@ -483,12 +509,25 @@ def list_catalog_categories(
     }
     
     # Add filters
-    filters = []
+    base_filters = []
     if params.active:
-        filters.append("active=true")
+        base_filters.append("active=true")
+
+    filters = []
     if params.query:
-        filters.append(f"titleLIKE{params.query}^ORdescriptionLIKE{params.query}")
-    
+        query_clauses = [
+            f"titleLIKE{params.query}",
+            f"descriptionLIKE{params.query}",
+        ]
+        if base_filters:
+            left = "^".join(base_filters + [query_clauses[0]])
+            right = "^".join(base_filters + [query_clauses[1]])
+            filters.append(f"{left}^OR{right}")
+        else:
+            filters.append(f"{query_clauses[0]}^OR{query_clauses[1]}")
+    else:
+        filters.extend(base_filters)
+
     if filters:
         query_params["sysparm_query"] = "^".join(filters)
     
