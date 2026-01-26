@@ -6,7 +6,7 @@ import logging
 from typing import Any, Dict, Optional
 
 import requests
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from servicenow_mcp.auth.auth_manager import AuthManager
 from servicenow_mcp.utils.config import ServerConfig
@@ -17,12 +17,26 @@ logger = logging.getLogger(__name__)
 class CreateUserCriteriaParams(BaseModel):
     """Parameters for creating user criteria."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     name: str = Field(..., description="Name of the user criteria")
     active: bool = Field(True, description="Whether the criteria is active")
     description: Optional[str] = Field(None, description="Description")
-    role: Optional[str] = Field(None, description="Role sys_id(s) to include")
-    group: Optional[str] = Field(None, description="Group sys_id(s) to include")
-    user: Optional[str] = Field(None, description="User sys_id(s) to include")
+    roles: Optional[str] = Field(
+        None,
+        description="Role sys_id(s) to include",
+        alias="role",
+    )
+    groups: Optional[str] = Field(
+        None,
+        description="Group sys_id(s) to include",
+        alias="group",
+    )
+    users: Optional[str] = Field(
+        None,
+        description="User sys_id(s) to include",
+        alias="user",
+    )
 
 
 class CreateUserCriteriaConditionParams(BaseModel):
@@ -48,12 +62,12 @@ def create_user_criteria(
     }
     if params.description:
         data["description"] = params.description
-    if params.role:
-        data["roles"] = params.role
-    if params.group:
-        data["groups"] = params.group
-    if params.user:
-        data["users"] = params.user
+    if params.roles:
+        data["roles"] = params.roles
+    if params.groups:
+        data["groups"] = params.groups
+    if params.users:
+        data["users"] = params.users
 
     try:
         response = requests.post(
