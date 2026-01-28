@@ -83,6 +83,7 @@ from servicenow_mcp.tools.changeset_tools import (
     GetChangesetDetailsParams,
     ListChangesetsParams,
     PublishChangesetParams,
+    SetCurrentChangesetParams,
     UpdateChangesetParams,
 )
 from servicenow_mcp.tools.changeset_tools import (
@@ -105,6 +106,9 @@ from servicenow_mcp.tools.changeset_tools import (
 )
 from servicenow_mcp.tools.changeset_tools import (
     update_changeset as update_changeset_tool,
+)
+from servicenow_mcp.tools.changeset_tools import (
+    set_current_changeset as set_current_changeset_tool,
 )
 from servicenow_mcp.tools.incident_tools import (
     AddCommentParams,
@@ -691,6 +695,13 @@ def get_tool_definitions(
             str,
             "Add a file to a changeset in ServiceNow",
             "str",  # Tool returns simple message
+        ),
+        "set_current_changeset": (
+            set_current_changeset_tool,
+            SetCurrentChangesetParams,
+            str,
+            "Set the current update set preference for a user",
+            "json",  # Tool returns list/dict
         ),
         # Script Include Tools
         "list_script_includes": (

@@ -12,6 +12,7 @@ The ServiceNow MCP server provides tools for managing changesets, allowing Claud
 - Creating and managing changesets
 - Committing and publishing changesets
 - Adding files to changesets
+- Setting the current update set preference
 - Analyzing changeset contents
 
 ## Available Tools
@@ -141,6 +142,29 @@ result = add_file_to_changeset({
     "changeset_id": "sys_update_set_123",
     "file_path": "scripts/login_fix.js",
     "file_content": "function fixLogin() { ... }"
+})
+```
+
+### 8. set_current_changeset
+
+Sets the current update set for a user by updating the `sys_user_preference`
+record where `name=sys_update_set`.
+
+**Parameters:**
+- `changeset_id` (required) - Changeset ID or sys_id to set as current
+- `user_sys_id` (optional) - User sys_id to set the preference for
+- `user_name` (optional) - User name to set the preference for (if `user_sys_id` not provided)
+- `create_if_missing` (optional, default: true) - Create the preference record if it does not exist
+
+**Notes:**
+- This updates the user preference and takes effect on the next UI load.
+- It does not change the active update set for the current REST request context.
+
+**Example:**
+```python
+result = set_current_changeset({
+    "changeset_id": "sys_update_set_123",
+    "user_name": "john.doe"
 })
 ```
 

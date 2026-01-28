@@ -11,7 +11,7 @@ import requests
 from pydantic import BaseModel, Field
 
 from servicenow_mcp.auth.auth_manager import AuthManager
-from servicenow_mcp.utils.config import ServerConfig
+from servicenow_mcp.utils.config import AuthType, ServerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,21 @@ class AddFileToChangesetParams(BaseModel):
     changeset_id: str = Field(..., description="Changeset ID or sys_id")
     file_path: str = Field(..., description="Path of the file to add")
     file_content: str = Field(..., description="Content of the file")
+
+
+class SetCurrentChangesetParams(BaseModel):
+    """Parameters for setting the current changeset (update set) preference."""
+
+    changeset_id: str = Field(..., description="Changeset ID or sys_id to set as current")
+    user_sys_id: Optional[str] = Field(
+        None, description="User sys_id to set the preference for"
+    )
+    user_name: Optional[str] = Field(
+        None, description="User name to set the preference for (if user_sys_id not provided)"
+    )
+    create_if_missing: bool = Field(
+        True, description="Create the preference record if it does not exist"
+    )
 
 
 def _unwrap_and_validate_params(
@@ -765,4 +780,194 @@ def add_file_to_changeset(
         return {
             "success": False,
             "message": f"Error adding file to changeset: {str(e)}",
-        } 
+        }
+
+
+def _infer_user_name_from_auth(auth_manager: AuthManager) -> Optional[str]:
+    """Infer a user name from the auth configuration when possible."""
+    try:
+        auth_config = auth_manager.config
+    except Exception:
+        return None
+
+    if auth_config.type == AuthType.BASIC and auth_config.basic:
+        return auth_config.basic.username
+    if auth_config.type == AuthType.OAUTH and auth_config.oauth:
+        return auth_config.oauth.username
+
+    return None
+
+
+def set_current_changeset(
+    auth_manager: AuthManager,
+    server_config: ServerConfig,
+    params: Union[Dict[str, Any], SetCurrentChangesetParams],
+) -> Dict[str, Any]:
+    """
+    Set the current changeset (update set) for a user by updating sys_user_preference.
+
+    Args:
+        auth_manager: The authentication manager.
+        server_config: The server configuration.
+        params: The parameters for setting the current changeset.
+
+    Returns:
+        The result of the update set preference operation.
+    """
+    # Unwrap and validate parameters
+    result = _unwrap_and_validate_params(
+        params,
+        SetCurrentChangesetParams,
+        required_fields=["changeset_id"],
+    )
+
+    if not result["success"]:
+        return result
+
+    validated_params = result["params"]
+
+    # Get the instance URL
+    instance_url = _get_instance_url(auth_manager, server_config)
+    if not instance_url:
+        return {
+            "success": False,
+            "message": "Cannot find instance_url in either server_config or auth_manager",
+        }
+
+    # Get the headers
+    headers = _get_headers(auth_manager, server_config)
+    if not headers:
+        return {
+            "success": False,
+            "message": "Cannot find get_headers method in either auth_manager or server_config",
+        }
+
+    # Add Content-Type header
+    headers["Content-Type"] = "application/json"
+
+    # Validate changeset exists
+    changeset_url = f"{instance_url}/api/now/table/sys_update_set/{validated_params.changeset_id}"
+    try:
+        changeset_response = requests.get(changeset_url, headers=headers)
+        if changeset_response.status_code == 404:
+            return {
+                "success": False,
+                "message": (
+                    "Changeset not found. Provide the sys_id of an existing update set."
+                ),
+            }
+        changeset_response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error validating changeset: {e}")
+        return {
+            "success": False,
+            "message": f"Error validating changeset: {str(e)}",
+        }
+
+    # Resolve user sys_id
+    user_sys_id = validated_params.user_sys_id
+    user_name = validated_params.user_name
+
+    if not user_sys_id:
+        if not user_name:
+            user_name = _infer_user_name_from_auth(auth_manager)
+
+        if not user_name:
+            return {
+                "success": False,
+                "message": (
+                    "User not provided and cannot infer from auth config. "
+                    "Provide user_sys_id or user_name."
+                ),
+            }
+
+        user_lookup_url = f"{instance_url}/api/now/table/sys_user"
+        user_params = {
+            "sysparm_query": f"user_name={user_name}",
+            "sysparm_limit": 1,
+            "sysparm_fields": "sys_id,user_name,name",
+        }
+        try:
+            user_response = requests.get(user_lookup_url, params=user_params, headers=headers)
+            user_response.raise_for_status()
+            user_result = user_response.json().get("result", [])
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error looking up user: {e}")
+            return {
+                "success": False,
+                "message": f"Error looking up user: {str(e)}",
+            }
+
+        if not user_result:
+            return {
+                "success": False,
+                "message": f"User not found for user_name: {user_name}",
+            }
+
+        user_sys_id = user_result[0].get("sys_id")
+
+    # Query existing preference
+    preference_url = f"{instance_url}/api/now/table/sys_user_preference"
+    preference_query = f"name=sys_update_set^user={user_sys_id}"
+    preference_params = {
+        "sysparm_query": preference_query,
+        "sysparm_limit": 1,
+    }
+
+    try:
+        preference_response = requests.get(
+            preference_url, params=preference_params, headers=headers
+        )
+        preference_response.raise_for_status()
+        preference_result = preference_response.json().get("result", [])
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error querying user preference: {e}")
+        return {
+            "success": False,
+            "message": f"Error querying user preference: {str(e)}",
+        }
+
+    # Update or create preference
+    try:
+        if preference_result:
+            preference_sys_id = preference_result[0].get("sys_id")
+            update_url = f"{preference_url}/{preference_sys_id}"
+            update_payload = {"value": validated_params.changeset_id}
+            update_response = requests.patch(
+                update_url, json=update_payload, headers=headers
+            )
+            update_response.raise_for_status()
+            updated = update_response.json().get("result", {})
+            return {
+                "success": True,
+                "message": "Update set preference updated successfully",
+                "preference": updated,
+            }
+
+        if not validated_params.create_if_missing:
+            return {
+                "success": False,
+                "message": "Update set preference not found and create_if_missing is False",
+            }
+
+        create_payload = {
+            "name": "sys_update_set",
+            "user": user_sys_id,
+            "value": validated_params.changeset_id,
+        }
+        create_response = requests.post(
+            preference_url, json=create_payload, headers=headers
+        )
+        create_response.raise_for_status()
+        created = create_response.json().get("result", {})
+        return {
+            "success": True,
+            "message": "Update set preference created successfully",
+            "preference": created,
+        }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error updating user preference: {e}")
+        return {
+            "success": False,
+            "message": f"Error updating user preference: {str(e)}",
+        }
