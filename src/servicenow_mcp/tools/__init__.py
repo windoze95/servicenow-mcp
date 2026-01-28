@@ -56,6 +56,7 @@ from servicenow_mcp.tools.changeset_tools import (
     get_changeset_details,
     list_changesets,
     publish_changeset,
+    set_current_changeset,
     update_changeset,
 )
 from servicenow_mcp.tools.incident_tools import (
@@ -193,6 +194,7 @@ __all__ = [
     "commit_changeset",
     "publish_changeset",
     "add_file_to_changeset",
+    "set_current_changeset",
 
     # Script Include tools
     "list_script_includes",
